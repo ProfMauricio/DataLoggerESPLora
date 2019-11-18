@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 
+const uint8_t slaveAddress = 0x69;
+
 /**
  * Tipo para trabalhar dados do DHT
  **/
@@ -26,18 +28,18 @@ typedef struct  Pluvi_Data {
  * */
 typedef struct  Vento_Data {
   String instante;
-  volatile int pulsos;
+  double velocidade;
 } Vento_Data;
 
 /**
  * Tamanho do buffer utilizado para guardar medidas 
  * dos sensores 
  * */
-#define TAM_BUFFER 1
+#define TAM_BUFFER 10
 /**
  * Velocidade de comunicação com o outro microcontrolador
  * */
-#define VELOCIDADE_COMM 9600
+#define VELOCIDADE_COMM 115200
 
 
 const char startMsg = '@';
