@@ -17,7 +17,7 @@ const int DISPLAY_RST_PIN = 16;
 
 SSD1306 display(0x3c, DISPLAY_SDA_PIN, DISPLAY_SCL_PIN);
 controleOLED meuOled(&display);
-
+unsigned long inicio = millis();
 
 
 /**
@@ -370,7 +370,7 @@ void setup() {
     }
     else
     {
-      rtc.SetAgingOffset(compilador);
+      //rtc.SetAgingOffset(compilador);
     }    
   }
  Serial.print("Instante do relogio: ");
@@ -415,14 +415,18 @@ void loop() {
   meuOled.modificarLinha(USER_INFO,DateTime2String(rtc.GetDateTime()));
   meuOled.modificarLinha(BUFFER_INFO, "Buffer Size: " + String(contadorDHT));
   meuOled.atualizarVisualizacao();
+  unsigned long atual = millis();
   // put your main code here, to run repeatedly:
-  if ( AlarmeAtivo())
+  if ( AlarmeAtivo() || atual - inicio > 15000 )
   {
+    
     //meuOled.modificarLinha(STATUS_INFO, "Reading sensors");
     //meuOled.atualizarVisualizacao();
     RtcDateTime t = rtc.GetDateTime();
     temp = DateTime2String(t);
     
+
+    /*
     bufferVento[contadorVento].instante =  temp; 
     //vel = MedirVelocidadeVento();
     vel = 10;
@@ -431,8 +435,15 @@ void loop() {
     
     bufferVento[contadorVento].velocidade =  vel;
     Serial.print("Instante: ");
+
+
+    */
+
     bufferDHT[contadorDHT].instante = temp;
     Serial.println(bufferDHT[contadorDHT].instante);
+
+    
+
     Serial.print("Umidade do ar (%): ");
     Serial.println(sensorHT.readHumidity());
     Serial.print("Temperatura (º): ");
@@ -445,7 +456,7 @@ void loop() {
 
     Serial.print("Contador atual : ");
     Serial.println(contadorDHT);
-    //if ( contadorDHT == TAM_BUFFER)
+    if ( contadorDHT == TAM_BUFFER)
     {
       meuOled.modificarLinha(LORA_INFO, "Preparing Packet");
       meuOled.atualizarVisualizacao();
@@ -455,8 +466,14 @@ void loop() {
         meuOled.atualizarVisualizacao();
         contadorDHT = 0;
       }
+
     }
-    
+    inicio = atual;
+
+
+/*
+
+
     Serial.print(F("Pluviometro - Instante -"));
     bufferPluviometro[contadorPluviometro].instante = temp;    
     Serial.println(String(bufferPluviometro[contadorPluviometro].instante));
@@ -470,12 +487,17 @@ void loop() {
      // enviarPluviometro(bufferPluviometro);
       //GravarDadosPluvi();
     }      
-    
-    contadorDHT = contadorDHT % TAM_BUFFER;
     contadorPluviometro = contadorPluviometro % TAM_BUFFER;
     contadorVento = contadorVento % TAM_BUFFER;
+  contadorDHT = contadorDHT % TAM_BUFFER;
+*/
 
+    
   }
+
+
+  /*
+
   if ( flagOscilacao == true)
   {
  //   Serial.println("P");
@@ -486,6 +508,10 @@ void loop() {
     //attachInterrupt(PLUVI_PIN, CapturarOscilacao, FALLING );
 
   } 
+
+  */
+
+
 
   if (Serial.available()> 0)
   {
@@ -502,7 +528,7 @@ void loop() {
   Serial.println(temp);
   //TratarMsgMestre(temp);
   }
-  Serial.println("entrando em modo sleep"); 
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_37,HIGH);
-  esp_deep_sleep_start();
+  //Serial.println("entrando em modo sleep"); 
+  //esp_sleep_enable_ext0_wakeup(GPIO_NUM_37,HIGH);
+  //esp_deep_sleep_start();
 }

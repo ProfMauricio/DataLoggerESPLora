@@ -79,7 +79,7 @@ bool TransmitirDados( String buffer )
     else
     {
       if ( flag == 1)
-        return true;
+        return true;  
       else
       {
           tentativas++;
@@ -106,8 +106,8 @@ void enviarMensagemLoRa(String msg)
   Serial.println("Montagem de msg finalizada - enviando");
   LoRa.endPacket();                     // Finaliza o pacote e envia
   Serial.println("Pacote finalizado e enviado");
-  contadorMsg++;  
-                           // Contador do numero de mensagnes enviadas
+  contadorMsg++;                        
+  //Contador do numero de mensagnes enviadas
 }
 
 
@@ -147,14 +147,19 @@ void IRAM_ATTR receberMensagemLoRA( int tamanhoPacote )
     Serial.println(F("########################################"));
     Serial.print(F("Recebido do dispositivo: 0x")); 
     Serial.println(String(remetente, HEX));
+    Serial.flush();
     Serial.print(F("Enviado para: 0x")); 
     Serial.println(String(destinatario, HEX));
+    Serial.flush();
     Serial.print(F("ID da mensagem: "));
     Serial.println(String(MsgId));
+    Serial.flush();
     Serial.print(F("Tamanho da mensagem: ")); 
     Serial.println(String(msg.length()));
+    Serial.flush();
     Serial.print(F("Mensagem: "));
     Serial.println(msg);
+    Serial.flush();
     // Serial.print(F("RSSI: "));
     // Serial.println(String(LoRa.packetRssi()));
     //Serial.print(F("Snr: ")); 
@@ -234,7 +239,7 @@ bool enviarDHT(DHT_Data *bufferDHT, int tam)
   bool envioOk = false;
   Serial.println("Envio de dados do DHT para Mestre");
   // preparando informação
-  while ( !envioOk  && tentativas < MAX_TENTATIVAS )
+  while ( !envioOk  || tentativas < MAX_TENTATIVAS )
   {
     for (i = 0; i < tam; i++)
     {
