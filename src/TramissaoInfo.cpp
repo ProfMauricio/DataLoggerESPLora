@@ -3,14 +3,13 @@
 #include <Arduino.h>
 #include <LoRa.h>
 
-
 // configuracoes de enderecos para o LoRa
 byte BroadCastAddressLoRa = 0xFF;
 byte RemoteAddressLoRa = 0x05;
 byte MyAddressLoRa = 0x01;
-byte contadorMsg = 0 ;
-long instanteUltimoEnvio = 0;  // TimeStamp da ultima mensagem enviada
-int intervalo = 3000;          // Intervalo entre verificacoes
+byte contadorMsg = 0;
+long instanteUltimoEnvio = 0; // TimeStamp da ultima mensagem enviada
+int intervalo = 3000;         // Intervalo entre verificacoes
 String retorno;
 volatile byte flag;
 
@@ -18,169 +17,210 @@ void IniciarLoRa()
 {
   // Iniciamos a comunicação SPI
   SPI.begin(LORA_SCK_PIN, LORA_MISO_PIN, LORA_MOSI_PIN, LORA_SS_PIN);
-  LoRa.setPins(LORA_SS_PIN,LORA_RST_PIN,LORA_DI00_PIN);
+  LoRa.setPins(LORA_SS_PIN, LORA_RST_PIN, LORA_DI00_PIN);
   Serial.println(F("Iniciando conector LoRa"));
-  
-  while ( !LoRa.begin(BAND)  )
-  { 
-     Serial.print(F("."));
-     delay(100);
+
+  while (!LoRa.begin(BAND))
+  {
+    Serial.print(F("."));
+    delay(100);
   }
 
-  Serial.println(F("Conexão LoRa iniciada "));
+  // Serial.println(F("Conexão LoRa iniciada "));
   LoRa.setSPI(SPI);
   LoRa.setSPIFrequency(4e6);
   LoRa.setSpreadingFactor(10);
   LoRa.setSignalBandwidth(42.5E3);
   LoRa.setTimeout(1000);
-  LoRa.crc();
-  Serial.println(F("Ajustando Spreading Factor"));
-  LoRa.onReceive(receberMensagemLoRA);
-  LoRa.receive();
+  // LoRa.crc();
+  // Serial.println(F("Ajustando Spreading Factor"));
 
-  
+  LoRa.onReceive(receberMensagemLoRA);
+
+  // enviarMensagemLoRa("Inicio LoRa slave");
+  LoRa.receive();
 }
 // ##################################################################################################
 
-bool TransmitirDados( String buffer )
+bool TransmitirDados(String buffer)
 {
-  unsigned long inicio, duracao=0;
+  unsigned long inicio, duracao = 0;
   int tentativas = 0;
-  String ret="";
-  
-  while( tentativas < MAX_TENTATIVAS )
+  String ret = "";
+
+  while (tentativas < MAX_TENTATIVAS)
   {
-    Serial.println(F("Retransmitindo dados para receiver ")); 
+    Serial.println(F("Retransmitindo dados para receiver "));
     Serial.print(F("Msg : "));
     Serial.println(buffer);
-    retorno= "";
+    retorno = "";
     enviarMensagemLoRa(buffer);
     flag = 0;
     LoRa.receive();
     Serial.println(F("Transmitido"));
-    inicio = millis();      
-  
-    Serial.println(F("Aguardando retorno"));  
+    inicio = millis();
+
+    Serial.println(F("Aguardando retorno"));
     do
     {
       duracao = millis() - inicio;
       delay(100);
       Serial.print("?");
-    }     
-    while (duracao < TIMEOUT && !flag );
+    } while (duracao < TIMEOUT && !flag);
 
-    if ( duracao >= TIMEOUT )
+    if (duracao >= TIMEOUT)
     {
-      tentativas++;  
+      tentativas++;
       Serial.print(F("FALHA POR TIMEOUT (tentativa "));
       Serial.print(tentativas);
       Serial.println(F(")"));
     }
     else
     {
-      if ( flag == 1)
-        return true;  
+      if (flag == 1)
+        return true;
       else
       {
-          tentativas++;
-          Serial.print(F("Tentativa "));
-          Serial.print(tentativas);
-          Serial.println(F(" falhou"));
+        tentativas++;
+        Serial.print(F("Tentativa "));
+        Serial.print(tentativas);
+        Serial.println(F(" falhou"));
       }
-      
     }
   }
   return false;
 }
 
 // Funcao que envia uma mensagem LoRa
-void enviarMensagemLoRa(String msg) 
+void enviarMensagemLoRa(String msg)
 {
-  
-  LoRa.beginPacket();                   // Inicia o pacote da mensagem
-  LoRa.write(RemoteAddressLoRa);              // Adiciona o endereco de destino
-  LoRa.write(MyAddressLoRa);             // Adiciona o endereco do remetente
-  LoRa.write(contadorMsg);                 // Contador da mensagem
-  LoRa.write(msg.length());        // Tamanho da mensagem em bytes
-  LoRa.print(msg);                 // Vetor da mensagem 
-  Serial.println("Montagem de msg finalizada - enviando");
-  LoRa.endPacket();                     // Finaliza o pacote e envia
-  Serial.println("Pacote finalizado e enviado");
-  contadorMsg++;                        
-  //Contador do numero de mensagnes enviadas
-}
 
+  LoRa.beginPacket();            // Inicia o pacote da mensagem
+  LoRa.write(RemoteAddressLoRa); // Adiciona o endereco de destino
+  LoRa.write(MyAddressLoRa);     // Adiciona o endereco do remetente
+  LoRa.write(contadorMsg);       // Contador da mensagem
+  LoRa.write(msg.length());      // Tamanho da mensagem em bytes
+  LoRa.print(msg);               // Vetor da mensagem
+  Serial.println("Montagem de msg finalizada - enviando");
+  LoRa.endPacket(); // Finaliza o pacote e envia
+  Serial.println("Pacote finalizado e enviado");
+  contadorMsg++;
+  // Contador do numero de mensagnes enviadas
+}
 
 // ##################################################################################################
 
-void IRAM_ATTR receberMensagemLoRA( int tamanhoPacote )
+void IRAM_ATTR receberMensagemLoRA(int tamanhoPacote)
 {
-  
-  if (tamanhoPacote == 0) 
+
+  if (tamanhoPacote == 0)
     return;
   else
   {
     // received a packet
-    Serial.println(F("[LoRa Mestre] Received packet "));
+    // Serial.println(F("[LoRa Mestre] Received packet "));
+    // Serial.flush();
+    // Serial.print(" ! ");
+    /*
     byte destinatario = LoRa.read();
     byte remetente = LoRa.read();
     byte MsgId = LoRa.read();
     byte tamanhoMsg = LoRa.read();
-    String msg= "";
+    */
+    String msg = "";
+    // Serial.print(" # ");
+
+    /**
+     * ERROR
+     */
     msg = LoRa.readStringUntil(endMsg);
-    // como leitura da mensagem retira o caractere de endMsg, o 
-    // tamanho é sempre diferente, acrescimo para igualar tamanhos
+    /**
+     * ERROR
+     */
+    Serial.print("Msg recebida -> ");
+    Serial.println(msg);
+
+    // Serial.print(" @ ");
+    //  como leitura da mensagem retira o caractere de endMsg, o
+    //  tamanho é sempre diferente, acrescimo para igualar tamanhos
+
+    /*
+
     if (msg.length()!= (int) tamanhoMsg - 1 )
     {
-      Serial.print(F("Mensagem incompleta "));
+      //Serial.print(F("Mensagem incompleta "));
       return;
-    } 
-    if ( destinatario != MyAddressLoRa && destinatario != BroadCastAddressLoRa )
+    }
+    if ( destinatario != MyAddressLoRa)// && destinatario != BroadCastAddressLoRa )
     {
-        Serial.println(F("Mensagem para outro dispositivo"));
+        //Serial.println(F("Mensagem para outro dispositivo"));
         return;
     }
-    // se não saiu até aqui é porque está tuod correto 
+
+    */
+
+    // se não saiu até aqui é porque está tuod correto
     // print RSSI of packet
 
-      // Caso a mensagem seja para este dispositivo, imprime os detalhes
+    // Caso a mensagem seja para este dispositivo, imprime os detalhes
+    /*
     Serial.println(F("########################################"));
-    Serial.print(F("Recebido do dispositivo: 0x")); 
+    Serial.print(F("Recebido do dispositivo: 0x"));
     Serial.println(String(remetente, HEX));
     Serial.flush();
-    Serial.print(F("Enviado para: 0x")); 
+    Serial.print(F("Enviado para: 0x"));
     Serial.println(String(destinatario, HEX));
     Serial.flush();
     Serial.print(F("ID da mensagem: "));
     Serial.println(String(MsgId));
     Serial.flush();
-    Serial.print(F("Tamanho da mensagem: ")); 
+    Serial.print(F("Tamanho da mensagem: "));
     Serial.println(String(msg.length()));
     Serial.flush();
     Serial.print(F("Mensagem: "));
+    */
+    // Serial.println(msg);
+    // Serial.flush();
+    //  Serial.print(F("RSSI: "));
+    //  Serial.println(String(LoRa.packetRssi()));
+    // Serial.print(F("Snr: "));
+    // Serial.println(String(LoRa.packetSnr()));
+    // Serial.println(F("########################################"));
+    // Serial.println();
+    // Serial.flush();
+
+    String temp = "";
+    bool inicio = false;
+    int i;
+    for (i = 0; i < msg.length() && !inicio; i++)
+    {
+      if (msg[i] == '@')
+        inicio = true;
+    }
+    i--;
+    if (inicio == true)
+      for (; i < msg.length(); i++)
+        temp += msg[i];
+
+    msg = temp;
+    Serial.print("Msg limpa -> ");
     Serial.println(msg);
-    Serial.flush();
-    // Serial.print(F("RSSI: "));
-    // Serial.println(String(LoRa.packetRssi()));
-    //Serial.print(F("Snr: ")); 
-    //Serial.println(String(LoRa.packetSnr()));
-    Serial.println(F("########################################"));
-    Serial.println();
-    Serial.flush();
-    if ( msg == "@OK")
+
+    if (msg == "@OK")
     {
       flag = 1;
-      Serial.println(F("msg confirmada"));
+      // Serial.println(F("msg confirmada"));
+      // Serial.flush();
     }
-    else if ( msg == "@FAIL")
+    else if (msg == "@FAIL")
     {
       flag = 0;
-      Serial.print(F("Pacote chegou incompleto ao destino"));
+      // Serial.print(F("Pacote chegou incompleto ao destino"));
+      // Serial.flush();
     }
-    Serial.flush();
-  } 
+    // Serial.flush();
+  }
 }
-
 
 // ##################################################################################################
 /*
@@ -216,14 +256,14 @@ bool avisarInicio()
         }
         else
         {
-          Serial.println("Comunicacao entre Tiva e Heltec [Falha] ");  
-        }      
+          Serial.println("Comunicacao entre Tiva e Heltec [Falha] ");
+        }
     }
-    else 
+    else
       Serial.println("saida por timeout");
     tentativas++;
     Serial.print("Tentativa de aviso de inicio: ");
-    Serial.println(tentativas);    
+    Serial.println(tentativas);
   }
   return envioOk;
 }
@@ -233,54 +273,58 @@ bool avisarInicio()
 bool enviarDHT(DHT_Data *bufferDHT, int tam)
 {
   int i;
-  int tentativas=0 ; 
-  
+  int tentativas = 0;
+
   String ret;
   bool envioOk = false;
   Serial.println("Envio de dados do DHT para Mestre");
   // preparando informação
-  while ( !envioOk  || tentativas < MAX_TENTATIVAS )
+  while (!envioOk || tentativas < MAX_TENTATIVAS)
   {
     for (i = 0; i < tam; i++)
     {
       ret = startMsg;
       ret = ret + "DHT";
-      ret = ret + separatorMsg ;
+      ret = ret + separatorMsg;
       ret = ret + bufferDHT[i].instante;
       ret = ret + separatorMsg;
       ret = ret + bufferDHT[i].temperatura;
       ret = ret + separatorMsg;
       ret = ret + bufferDHT[i].umidade;
+      ret = ret + csvSeparator;
       ret = ret + endMsg;
       tentativas++;
-      Serial.print("Msg montada :");
-      Serial.println(ret);
-      envioOk =  TransmitirDados(ret);        
+      envioOk = TransmitirDados(ret);
     }
-
   }
-  return envioOk; 
+  return envioOk;
 }
-
 
 // ##################################################################################################
 
 bool enviarPluviometro(Pluvi_Data *bufferPluviometro, int tam)
 {
   int i;
+  int tentativas = 0;
   String msg;
+  bool envioOk = false;
   Serial.println("Envio de dados do Pluviometro para Mestre");
-  for (i = 0; i < tam; i++)
+  while (!envioOk || tentativas < MAX_TENTATIVAS)
   {
-    msg = startMsg;
-    msg = msg + "PLU";
-    msg = msg + separatorMsg;
-    msg = msg + bufferPluviometro[i].instante;
-    msg = msg + separatorMsg;
-    msg = msg + bufferPluviometro[i].pulsos;
-    msg = msg + endMsg;
-    bufferPluviometro[i].pulsos=0;
-    TransmitirDados(msg);
-    return true;
+    for (i = 0; i < tam; i++)
+    {
+      msg = startMsg;
+      msg = msg + "PLU";
+      msg = msg + separatorMsg;
+      msg = msg + bufferPluviometro[i].instante;
+      msg = msg + separatorMsg;
+      msg = msg + bufferPluviometro[i].pulsos;
+      msg = msg + csvSeparator;
+      msg = msg + endMsg;
+      //bufferPluviometro[i].pulsos = 0;
+      tentativas++;
+      envioOk= TransmitirDados(msg);
+    }
   }
-}  
+  return envioOk;
+}

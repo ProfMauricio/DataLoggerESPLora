@@ -64,7 +64,7 @@ volatile int contadorVento = 0;
  **/ 
 Pluvi_Data bufferPluviometro[TAM_BUFFER];
 int contadorPluviometro = 0;
-
+int pulsosPluvi = 0;
 /**
  * String que armazena os instantes
  * */
@@ -116,7 +116,7 @@ bool AlarmeAtivo();
 /**
  * Função de interrupção para captura do dado do pluviometro
  **/
-void CapturarOscilacao();
+void CapturarOscilacao(int reset);
 
 /**
  * Rotina que captura a velocidade do vento com base nos pulsos enviados 

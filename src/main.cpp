@@ -19,14 +19,12 @@ SSD1306 display(0x3c, DISPLAY_SDA_PIN, DISPLAY_SCL_PIN);
 controleOLED meuOled(&display);
 unsigned long inicio = millis();
 
-
 /**
  * Objeto do rtc para captura de instantes
  * */
 RtcDS3231<TwoWire> rtc(Wire1);
 
-unsigned long int contadorPacotesEnviados=0, contadorPacotesFalha=0;
-
+unsigned long int contadorPacotesEnviados = 0, contadorPacotesFalha = 0;
 
 /**
  * Rotina chamada na interrupção do RTC
@@ -35,22 +33,21 @@ void IRAM_ATTR RotinaInterrupcaoAlarm()
 {
   interruptCountAlarm++;
   interruptFlagAlarm = true;
-
 }
 
 /**
- * Função que verifica se existe algum alarme ativo do RTC 
+ * Função que verifica se existe algum alarme ativo do RTC
  * */
 bool AlarmeAtivo()
 {
   bool ativo = false;
 
-  if ( interruptFlagAlarm == true)
+  if (interruptFlagAlarm == true)
   {
     interruptFlagAlarm = false;
-   
+
     DS3231AlarmFlag flag = rtc.LatchAlarmsTriggeredFlags();
-    if ( flag & DS3231AlarmFlag_Alarm2)
+    if (flag & DS3231AlarmFlag_Alarm2)
     {
       Serial.println("Alarme 2 ativado");
       ativo = true;
@@ -58,31 +55,37 @@ bool AlarmeAtivo()
   }
   else if (usuarioSolicitaLeitura == true)
   {
-    usuarioSolicitaLeitura =false;
+    usuarioSolicitaLeitura = false;
     return true;
   }
   return ativo;
 }
 
-//#######################################################################################################
+// #######################################################################################################
+
+unsigned long ultimoPluviometroSegundos = millis();
+
+
 
 void IRAM_ATTR CapturarOscilacao()
 {
-  //bufferPluviometro[contadorPluviometro].pulsos++;
-  flagOscilacao = true;
-  #if _DEBUG == SERIAL_VIEW
+  if(millis()-ultimoPluviometroSegundos>2000){
+  bufferPluviometro[contadorPluviometro].pulsos++;
+  // flagOscilacao = true;
+#if _DEBUG == SERIAL_VIEW
   Serial.print("#");
-  #endif
+#endif
+  ultimoPluviometroSegundos=millis();
+  }
 }
 
 void IRAM_ATTR CapturarEventoAnemometro()
 {
   contadorVento++;
-  #if _DEBUG == SERIAL_VIEW
+#if _DEBUG == SERIAL_VIEW
   Serial.print("~");
-  #endif  
+#endif
 }
-
 
 /*************************************************************************************
  * Funçao para tratar os dados recebidos pela porta serial
@@ -122,31 +125,32 @@ void help()
 
 double MedirVelocidadeVento()
 {
-  int leitura, ultimoEstado=LOW;
-  int debounceDelay= 10;
-  int ultimoInstanteDebounce =0;
+  int leitura, ultimoEstado = LOW;
+  int debounceDelay = 10;
+  int ultimoInstanteDebounce = 0;
   int estadoPino = LOW;
 
   Serial.println("iniciando medida de vento..");
   contadorVento = 0;
   // habilitar interrupçao na porta conectada ao sensor
-  //attachInterrupt(ANEMOMETRO_PIN, CapturarEventoAnemometro, LOW );
+  // attachInterrupt(ANEMOMETRO_PIN, CapturarEventoAnemometro, LOW );
   unsigned long instanteInicio = millis();
-  while ( millis() - instanteInicio < (TEMPO_AMOSTRAGEM_VEL_VENTO * 1000 ))
+  while (millis() - instanteInicio < (TEMPO_AMOSTRAGEM_VEL_VENTO * 1000))
   {
-    
-    leitura = digitalRead(ANEMOMETRO_PIN) ;
 
-    if ( leitura != ultimoEstado )
+    leitura = digitalRead(ANEMOMETRO_PIN);
+
+    if (leitura != ultimoEstado)
     {
-       ultimoInstanteDebounce = millis();
+      ultimoInstanteDebounce = millis();
     }
-    if ( ( millis() - ultimoInstanteDebounce ) > debounceDelay ){
+    if ((millis() - ultimoInstanteDebounce) > debounceDelay)
+    {
 
-      if ( leitura != estadoPino  )
+      if (leitura != estadoPino)
       {
         estadoPino = leitura;
-        if ( estadoPino == HIGH)
+        if (estadoPino == HIGH)
           contadorVento++;
       }
     }
@@ -154,7 +158,7 @@ double MedirVelocidadeVento()
   }
 
   // encerra interrupçao na porta
-  //detachInterrupt(ANEMOMETRO_PIN);
+  // detachInterrupt(ANEMOMETRO_PIN);
   Serial.println("fim da amostragem");
   Serial.print("Pulsos computados: ");
   Serial.println(contadorVento);
@@ -162,19 +166,17 @@ double MedirVelocidadeVento()
   double pulsosPorRaio = 8.0;
   // tamanho do raio em metros
   double raio = 0.02;
-  double deltaS = (double) contadorVento / pulsosPorRaio;
+  double deltaS = (double)contadorVento / pulsosPorRaio;
   Serial.print("DeltaS = ");
   Serial.println(deltaS);
   deltaS *= raio;
   // calculando a velocidade já em metros/segundo
-  double velocidade = (2.0 * PI * deltaS ) / TEMPO_AMOSTRAGEM_VEL_VENTO;
+  double velocidade = (2.0 * PI * deltaS) / TEMPO_AMOSTRAGEM_VEL_VENTO;
   Serial.print(F("Velocidade -> "));
   Serial.println(velocidade);
 
-  return velocidade; 
+  return velocidade;
 }
-
-
 
 void tratarEntradaSerial()
 {
@@ -182,7 +184,7 @@ void tratarEntradaSerial()
   uint16_t ano;
   RtcDateTime instante;
   String tmpMsg;
-  String  instanteStr;
+  String instanteStr;
 
   // Parando timer para tratar informaçoes que estao sendo recebidas
   // -> não precisa.stop();
@@ -190,24 +192,23 @@ void tratarEntradaSerial()
   // parando a interrupção
   //  MostrarInstanteAtual();
 
-
   // extraindo o tipo de comando enviado
-  tmpMsg = bufferSerial.substring(0,5);
-  #if _DEBUG >= DEBUG_SERIAL
+  tmpMsg = bufferSerial.substring(0, 5);
+#if _DEBUG >= DEBUG_SERIAL
   Serial.println(tmpMsg);
-  #endif
-  //testando se o usuario que ajustar o horario
+#endif
+  // testando se o usuario que ajustar o horario
   if (tmpMsg.equalsIgnoreCase("@time"))
   {
     instante = rtc.GetDateTime();
     tmpMsg = obterParametroSerial(1);
-    par1 = (uint8_t) tmpMsg.toInt();
+    par1 = (uint8_t)tmpMsg.toInt();
     tmpMsg = obterParametroSerial(2);
     par2 = tmpMsg.toInt();
-    tmpMsg =  obterParametroSerial(3);
-    par3 = (uint8_t) tmpMsg.toInt();
+    tmpMsg = obterParametroSerial(3);
+    par3 = (uint8_t)tmpMsg.toInt();
     RtcDateTime novoInstante;
-    novoInstante =   RtcDateTime(instante.Year(),instante.Month(), instante.Day(),par1, par2, par3);
+    novoInstante = RtcDateTime(instante.Year(), instante.Month(), instante.Day(), par1, par2, par3);
     rtc.SetDateTime(novoInstante);
     instante = rtc.GetDateTime();
     instanteStr = DateTime2String(instante);
@@ -223,25 +224,25 @@ void tratarEntradaSerial()
     par3 = tmpMsg.toInt();
     tmpMsg = obterParametroSerial(3);
     ano = tmpMsg.toInt();
-    RtcDateTime novoInstante = RtcDateTime(ano, par3, par2,instante.Hour(), instante.Minute(), instante.Second());
+    RtcDateTime novoInstante = RtcDateTime(ano, par3, par2, instante.Hour(), instante.Minute(), instante.Second());
     rtc.SetDateTime(novoInstante);
     instante = rtc.GetDateTime();
     instanteStr = DateTime2String(instante);
     Serial.println(tmpMsg);
   }
-  else if ( tmpMsg.equalsIgnoreCase("@dado")) // usuário solicitando coleta de dados 
+  else if (tmpMsg.equalsIgnoreCase("@dado")) // usuário solicitando coleta de dados
   {
-    Serial.println(F("Ativando flag de captura"));    
+    Serial.println(F("Ativando flag de captura"));
     usuarioSolicitaLeitura = true;
     Serial.print("valor de flag: ");
     Serial.println(interruptFlagAlarm);
   }
-  else if ( tmpMsg.equalsIgnoreCase("@tirq")) // requisição de instante pelo ESP
+  else if (tmpMsg.equalsIgnoreCase("@tirq")) // requisição de instante pelo ESP
   {
     instante = rtc.GetDateTime();
     instanteStr = DateTime2String(instante);
     Serial1.print(instanteStr);
-  } 
+  }
   else if (tmpMsg.equalsIgnoreCase("@help"))
     help();
 
@@ -252,60 +253,59 @@ void tratarEntradaSerial()
   }
   else
   {
-    tmpMsg = bufferSerial.substring(0,4);
+    tmpMsg = bufferSerial.substring(0, 4);
     if (tmpMsg.equalsIgnoreCase("@now"))
     {
       instante = rtc.GetDateTime();
-      instanteStr = DateTime2String(instante );
+      instanteStr = DateTime2String(instante);
       Serial.println(instanteStr);
     }
     else if (tmpMsg.equalsIgnoreCase("@deb"))
     {
       Serial.println(F("Situacao do sistema"));
       instante = rtc.GetDateTime();
-      instanteStr = DateTime2String(instante );
+      instanteStr = DateTime2String(instante);
       Serial.println(instanteStr);
       Serial.print(F("Pulsos do pluviometro: "));
       Serial.println(contadorPulsosPluviometro);
       Serial.print("Umidade do ar (%): ");
       Serial.println(sensorHT.readHumidity());
       Serial.print("Temperatura (º): ");
-      Serial.println(sensorHT.readTemperature()); 
+      Serial.println(sensorHT.readTemperature());
     }
-    else 
-       Serial.println(F("Comando nao reconhecido"));
+    else
+      Serial.println(F("Comando nao reconhecido"));
   }
   //
   // zerando buffer a cada comando
   bufferSerial = "";
 }
 
-
 /*************************************************************************************
  * Funcao para obter os parametros passados pela serial
  *************************************************************************************/
-String obterParametroSerial(int nroParam )
+String obterParametroSerial(int nroParam)
 {
-  String tmp="";
+  String tmp = "";
   tmp.reserve(5);
   switch (nroParam)
   {
   case 1:
-    tmp = bufferSerial.substring(6,8);
+    tmp = bufferSerial.substring(6, 8);
 #if _DEBUG >= DEBUG_SERIAL
     Serial.print("par 1 ->");
     Serial.println(tmp.toInt());
 #endif
     break;
   case 2:
-    tmp = bufferSerial.substring(9,11);
+    tmp = bufferSerial.substring(9, 11);
 #if _DEBUG >= DEBUG_SERIAL
     Serial.print("par 2 ->");
     Serial.println(tmp.toInt());
 #endif
     break;
   case 3:
-    tmp = bufferSerial.substring(12,16);
+    tmp = bufferSerial.substring(12, 16);
 #if _DEBUG >= DEBUG_SERIAL
     Serial.print("par 3 ->");
     Serial.println(tmp.toInt());
@@ -313,18 +313,18 @@ String obterParametroSerial(int nroParam )
     break;
   }
   return tmp;
-} 
+}
 
-
-String DateTime2String( RtcDateTime i )
+String DateTime2String(RtcDateTime i)
 {
   char datetimeStr[20];
-  sprintf(datetimeStr,"%02u/%02u/%04u %02u:%02u:%02u",            
-           i.Day(), i.Month(), i.Year(), i.Hour(), i.Minute(), i.Second());
+  sprintf(datetimeStr, "%02u/%02u/%04u %02u:%02u:%02u",
+          i.Day(), i.Month(), i.Year(), i.Hour(), i.Minute(), i.Second());
   return String(datetimeStr);
 }
 
-void setup() {
+void setup()
+{
   String instante;
   // put your setup code here, to run once:
   delay(1000);
@@ -332,69 +332,79 @@ void setup() {
   Serial.begin(9600);
 
   pinMode(pinoRTCSquareWave, INPUT);
-  pinMode(PLUVI_PIN, INPUT );
-  pinMode(ANEMOMETRO_PIN, INPUT);
-  
+  // pinMode(PLUVI_PIN, INPUT );
+  // pinMode(ANEMOMETRO_PIN, INPUT);
 
-  while(!Serial);
-  Wire1.begin(21,22);
-  digitalWrite(LED_BUILTIN,HIGH ); 
-  
+  while (!Serial)
+    ;
+  Wire1.begin(21, 22);
+  digitalWrite(LED_BUILTIN, HIGH);
+
   Serial.println(F("Iniciando OLED"));
-  pinMode(DISPLAY_RST_PIN,OUTPUT); //RST do oled
-  pinMode(25,OUTPUT);
+  pinMode(DISPLAY_RST_PIN, OUTPUT); // RST do oled
+  pinMode(25, OUTPUT);
   digitalWrite(DISPLAY_RST_PIN, LOW); // resetao OLED
-  delay(50); 
+  delay(50);
   digitalWrite(DISPLAY_RST_PIN, HIGH); // enquanto o OLED estiver ligado, GPIO16 deve estar HIGH
-  display.init(); //inicializa o display
-  display.flipScreenVertically(); 
-  //display.setFont(ArialMT_Plain_12); //configura a fonte para um tamanho maior
+  display.init();                      // inicializa o display
+  display.flipScreenVertically();
+  // display.setFont(ArialMT_Plain_12); //configura a fonte para um tamanho maior
   display.clear();
-  
+
   Serial.print("Compilado em: ");
   Serial.print(__DATE__);
   Serial.print(F(" "));
   Serial.println(__TIME__);
-  //Wire.begin();
+  // Wire.begin();
   rtc.Begin();
-  RtcDateTime compilador = RtcDateTime(__DATE__,__TIME__);  
+  RtcDateTime compilador = RtcDateTime(__DATE__, __TIME__);
   instante = DateTime2String(compilador);
-   
+
   if (!rtc.IsDateTimeValid())
   {
     Serial.printf("Tempo inválido");
-    if ( rtc.LastError() != 0 )
+    if (rtc.LastError() != 0)
     {
-    Serial.println("Erro de comunicação");
-    Serial.println(rtc.LastError());
+      Serial.println("Erro de comunicação");
+      Serial.println(rtc.LastError());
     }
     else
     {
-      //rtc.SetAgingOffset(compilador);
-    }    
+      // rtc.SetAgingOffset(compilador);
+    }
   }
- Serial.print("Instante do relogio: ");
+  Serial.print("Instante do relogio: ");
   instante = DateTime2String(rtc.GetDateTime());
   Serial.println(instante);
+
+  /*
+
   // ajustes de pinos para interrupcao do rtc
   rtc.Enable32kHzPin(false);
   rtc.SetSquareWavePin(DS3231SquareWavePin_ModeAlarmTwo);
 
   // Ajustando o alarme 2 para disparar a cada 1 minuto
+
+
   DS3231AlarmTwo alarme2(0,0,0,DS3231AlarmTwoControl_OncePerMinute);
   rtc.SetAlarmTwo(alarme2);
   rtc.LatchAlarmsTriggeredFlags();
+]
 
-  // ativando as interrupções 
+
+  // ativando as interrupções
   attachInterrupt(pinoRTCSquareWave, RotinaInterrupcaoAlarm, FALLING);
-  //attachInterrupt(PLUVI_PIN, CapturarOscilacao, FALLING);  
-  delay(1000);
 
+  delay(1000);
+    */
   // Iniciando sistema de coleta de temperatura/umidade
+
+  attachInterrupt(PLUVI_PIN, CapturarOscilacao, FALLING);
+
   Serial.println(F("Iniciando sensor DHT22"));
   sensorHT.begin();
   Serial.println("Umidade :" + String(sensorHT.readHumidity()));
-  Serial.println("Temperatura: "+ String(sensorHT.readTemperature()));
+  Serial.println("Temperatura: " + String(sensorHT.readTemperature()));
 
   Serial.println(F("Iniciando o sistema de coleta de dados "));
   Serial.println(F("Sistema de coleta de sensores"));
@@ -409,92 +419,96 @@ void setup() {
 /**
  * Rotina principal de looP
  * */
-void loop() {
+void loop()
+{
   String temp;
   double vel;
-  meuOled.modificarLinha(USER_INFO,DateTime2String(rtc.GetDateTime()));
+  meuOled.modificarLinha(USER_INFO, DateTime2String(rtc.GetDateTime()));
   meuOled.modificarLinha(BUFFER_INFO, "Buffer Size: " + String(contadorDHT));
   meuOled.atualizarVisualizacao();
   unsigned long atual = millis();
   // put your main code here, to run repeatedly:
-  if ( AlarmeAtivo() || atual - inicio > 15000 )
+  if (AlarmeAtivo() || atual - inicio > 180000)
   {
-    
-    //meuOled.modificarLinha(STATUS_INFO, "Reading sensors");
-    //meuOled.atualizarVisualizacao();
+
+    // meuOled.modificarLinha(STATUS_INFO, "Reading sensors");
+    // meuOled.atualizarVisualizacao();
     RtcDateTime t = rtc.GetDateTime();
     temp = DateTime2String(t);
-    
 
     /*
-    bufferVento[contadorVento].instante =  temp; 
+    bufferVento[contadorVento].instante =  temp;
     //vel = MedirVelocidadeVento();
     vel = 10;
     Serial.print(F("Velocidade do vento: "));
-    Serial.println( vel );    
-    
+    Serial.println( vel );
+
     bufferVento[contadorVento].velocidade =  vel;
     Serial.print("Instante: ");
 
 
     */
-
+    Serial.println();
+    Serial.println();
     bufferDHT[contadorDHT].instante = temp;
     Serial.println(bufferDHT[contadorDHT].instante);
+    Serial.print("Contador atual DHT: ");
+    Serial.println(contadorDHT);
+    Serial.print("Contador atual Pluviometro: ");
+    Serial.println(contadorPluviometro);
+    Serial.println("#############");
+    Serial.flush();
 
-    
-
+    // DHT22
     Serial.print("Umidade do ar (%): ");
     Serial.println(sensorHT.readHumidity());
     Serial.print("Temperatura (º): ");
-    Serial.println(sensorHT.readTemperature()); 
-
-    // lendo dados do DHT22
+    Serial.println(sensorHT.readTemperature());
     bufferDHT[contadorDHT].umidade = sensorHT.readHumidity();
     bufferDHT[contadorDHT].temperatura = sensorHT.readTemperature();
     contadorDHT++;
+    
 
-    Serial.print("Contador atual : ");
-    Serial.println(contadorDHT);
-    if ( contadorDHT == TAM_BUFFER)
+    // PLUVIOMETRO
+    Serial.print(F("Pluviometro"));
+    bufferPluviometro[contadorPluviometro].instante = temp;
+    Serial.print(F("Pulsos: "));
+    //bufferPluviometro[contadorPluviometro].pulsos = contadorPulsosPluviometro;
+    Serial.println(bufferPluviometro[contadorPluviometro].pulsos);
+    contadorPluviometro++;
+
+    if (TAM_BUFFER == contadorDHT)
     {
       meuOled.modificarLinha(LORA_INFO, "Preparing Packet");
       meuOled.atualizarVisualizacao();
-      if ( enviarDHT(bufferDHT, contadorDHT)){
-        Serial.println("Dados de Umidade e Temperatura enviados");//      GravarDadosDHT();    
+      if (enviarDHT(bufferDHT, contadorDHT))
+      {
+        Serial.println();
+        Serial.println("Dados de Umidade e Temperatura enviados"); //      GravarDadosDHT();
         meuOled.modificarLinha(LORA_INFO, "Send it (" + String(contadorPacotesEnviados) + ")");
         meuOled.atualizarVisualizacao();
         contadorDHT = 0;
       }
-
+    }
+    if (TAM_BUFFER==contadorPluviometro)
+      {
+        if (enviarPluviometro(bufferPluviometro, contadorPluviometro))
+        {
+          // GravarDadosPluvi();
+          Serial.println();
+          Serial.println("Dados de pulsos do pluviometro enviados");
+          contadorPluviometro = 0;
+          
+        }
     }
     inicio = atual;
 
-
-/*
-
-
-    Serial.print(F("Pluviometro - Instante -"));
-    bufferPluviometro[contadorPluviometro].instante = temp;    
-    Serial.println(String(bufferPluviometro[contadorPluviometro].instante));
-    Serial.print(F("Pulsos: "));
-    bufferPluviometro[contadorPluviometro].pulsos = contadorPulsosPluviometro;
-    contadorPulsosPluviometro = 0;
-    Serial.println(bufferPluviometro[contadorPluviometro].pulsos);
-    contadorPluviometro++;
-    if ( contadorPluviometro == TAM_BUFFER)
-    {
-     // enviarPluviometro(bufferPluviometro);
-      //GravarDadosPluvi();
-    }      
-    contadorPluviometro = contadorPluviometro % TAM_BUFFER;
-    contadorVento = contadorVento % TAM_BUFFER;
-  contadorDHT = contadorDHT % TAM_BUFFER;
-*/
-
-    
+    /*
+        contadorPluviometro = contadorPluviometro % TAM_BUFFER;
+        contadorVento = contadorVento % TAM_BUFFER;
+      contadorDHT = contadorDHT % TAM_BUFFER;
+    */
   }
-
 
   /*
 
@@ -507,9 +521,9 @@ void loop() {
     flagOscilacao = false;
     //attachInterrupt(PLUVI_PIN, CapturarOscilacao, FALLING );
 
-  } 
+  }
 
-  */
+
 
 
 
@@ -519,16 +533,22 @@ void loop() {
     //meuOled.atualizarVisualizacao();
     // get the new byte:
     bufferSerial = Serial.readStringUntil('\rw');
-    tratarEntradaSerial();   
+    tratarEntradaSerial();
   }
+
+
   //temp = VerificarSerialMestre();
+
+
   if (temp != "")
   {
   Serial.print("Mensagem do mestre : ");
   Serial.println(temp);
   //TratarMsgMestre(temp);
   }
-  //Serial.println("entrando em modo sleep"); 
-  //esp_sleep_enable_ext0_wakeup(GPIO_NUM_37,HIGH);
-  //esp_deep_sleep_start();
+  */
+
+  // Serial.println("entrando em modo sleep");
+  // esp_sleep_enable_ext0_wakeup(GPIO_NUM_37,HIGH);
+  // esp_deep_sleep_start();
 }

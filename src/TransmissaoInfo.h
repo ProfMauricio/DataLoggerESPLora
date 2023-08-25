@@ -30,7 +30,7 @@ bool enviarDHT(DHT_Data *bufferDHT);
  * Rotina para transmissão de dados obtidos do Pluviometro (pulsos a cada quantidade de volume de chuva)
  * @bufferPluviometro Vetor de registro com os dados de chuva obtidos a cada minuto
  * */
-void enviarPluviometro(Pluvi_Data *bufferPluviometro);
+bool enviarPluviometro(Pluvi_Data *bufferPluviometro);
 
 /**
  * Rotina para inicio de atividades do escrava
