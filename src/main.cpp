@@ -428,7 +428,7 @@ void loop()
   meuOled.atualizarVisualizacao();
   unsigned long atual = millis();
   // put your main code here, to run repeatedly:
-  if (AlarmeAtivo() || atual - inicio > 180000)
+  if (AlarmeAtivo() || atual - inicio > 3000)
   {
 
     // meuOled.modificarLinha(STATUS_INFO, "Reading sensors");
@@ -470,13 +470,16 @@ void loop()
     
 
     // PLUVIOMETRO
-    Serial.print(F("Pluviometro"));
+    Serial.print(F("Pulso(s) pluviometro "));
+    if(bufferPluviometro[contadorPluviometro].pulsos!=0){
     bufferPluviometro[contadorPluviometro].instante = temp;
     Serial.print(F("Pulsos: "));
     //bufferPluviometro[contadorPluviometro].pulsos = contadorPulsosPluviometro;
     Serial.println(bufferPluviometro[contadorPluviometro].pulsos);
     contadorPluviometro++;
-
+    Serial.println("diferente(s) de zero. Dados coletados");
+    }
+    Serial.println("igual a zero. Dados nao coletados");
     if (TAM_BUFFER == contadorDHT)
     {
       meuOled.modificarLinha(LORA_INFO, "Preparing Packet");
