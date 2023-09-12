@@ -189,20 +189,22 @@ void IRAM_ATTR receberMensagemLoRA(int tamanhoPacote)
     // Serial.println();
     // Serial.flush();
 
-    String temp = "";
-    bool inicio = false;
+    int inicio = 0;
     int i;
-    for (i = 0; i < msg.length() && !inicio; i++)
+    for (i = 0; i < msg.length(); i++)
     {
       if (msg[i] == '@')
-        inicio = true;
+        inicio = i;
     }
-    i--;
+    //i--;
+    /*
     if (inicio == true)
       for (; i < msg.length(); i++)
         temp += msg[i];
 
     msg = temp;
+    */
+    msg=msg.substring(inicio,msg.length());
     Serial.print("Msg limpa -> ");
     Serial.println(msg);
 
@@ -321,7 +323,7 @@ bool enviarPluviometro(Pluvi_Data *bufferPluviometro, int tam)
       msg = msg + bufferPluviometro[i].pulsos;
       msg = msg + csvSeparator;
       msg = msg + endMsg;
-      //bufferPluviometro[i].pulsos = 0;
+      bufferPluviometro[i].pulsos = 0;
       tentativas++;
       envioOk= TransmitirDados(msg);
     }

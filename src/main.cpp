@@ -69,7 +69,7 @@ unsigned long ultimoPluviometroSegundos = millis();
 
 void IRAM_ATTR CapturarOscilacao()
 {
-  if(millis()-ultimoPluviometroSegundos>2000){
+  if(millis()-ultimoPluviometroSegundos>4000){
   bufferPluviometro[contadorPluviometro].pulsos++;
   // flagOscilacao = true;
 #if _DEBUG == SERIAL_VIEW
