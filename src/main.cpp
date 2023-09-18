@@ -27,6 +27,69 @@ RtcDS3231<TwoWire> rtc(Wire1);
 unsigned long int contadorPacotesEnviados = 0, contadorPacotesFalha = 0;
 
 /**
+ * Buffer que guarda as medidas de umidade/temperatura lidas
+ **/
+DHT_Data bufferDHT[TAM_BUFFER];
+volatile int contadorDHT = 0;
+
+/**
+ * String que armazena os instantes
+ * */
+String datetimeStr;
+
+/**
+ * Objeto que captura os dados do sensor DHT
+ * */
+DHT sensorHT(DHT_PIN, DHT22);
+
+/**
+ * Contador de pulsos do pluviometro utilizado na interrupção para
+ * gravar dados
+ * */
+volatile int contadorPulsosPluviometro = 0;
+
+/**
+ * Buffer que armazena as medidas de vento
+ **/
+Vento_Data bufferVento[TAM_BUFFER];
+volatile int contadorVento = 0;
+
+/**
+ * Flag de aviso do usuario que deseja forçar a realização de uma coleta
+ **/
+bool usuarioSolicitaLeitura = false;
+
+/**
+ * Contador de interrupção por alarme
+ * */
+volatile uint64_t interruptCountAlarm = 0;
+
+String bufferSerial;
+
+/**
+ * Flag do alarme RTC apra captura de dados por alarme do DS3231
+ **/
+volatile bool interruptFlagAlarm = false;
+
+/**
+ * Buffer que guarda a quantidade de pulsos em determinado tempo
+ **/
+Pluvi_Data bufferPluviometro[TAM_BUFFER];
+int contadorPluviometro = 0;
+// int pulsosPluvi = 0;
+
+/**
+ * Flag que sinaliza que houve oscilação no pluviometro
+ * */
+volatile bool flagOscilacao = false;
+
+/*****************************************************************************************************
+ *
+ *          INICIO DAS FUNÇÕES
+ *
+ ******************************************************************************************************/
+
+/**
  * Rotina chamada na interrupção do RTC
  * */
 void IRAM_ATTR RotinaInterrupcaoAlarm()
@@ -65,17 +128,16 @@ bool AlarmeAtivo()
 
 unsigned long ultimoPluviometroSegundos = millis();
 
-
-
 void IRAM_ATTR CapturarOscilacao()
 {
-  if(millis()-ultimoPluviometroSegundos>4000){
-  bufferPluviometro[contadorPluviometro].pulsos++;
-  // flagOscilacao = true;
+  if (millis() - ultimoPluviometroSegundos > 2000)
+  {
+    bufferPluviometro[contadorPluviometro].pulsos++;
+    flagOscilacao = true;
 #if _DEBUG == SERIAL_VIEW
-  Serial.print("#");
+    Serial.print("#");
 #endif
-  ultimoPluviometroSegundos=millis();
+    ultimoPluviometroSegundos = millis();
   }
 }
 
@@ -377,29 +439,36 @@ void setup()
   instante = DateTime2String(rtc.GetDateTime());
   Serial.println(instante);
 
-  /*
+  
 
   // ajustes de pinos para interrupcao do rtc
   rtc.Enable32kHzPin(false);
   rtc.SetSquareWavePin(DS3231SquareWavePin_ModeAlarmTwo);
-
+  Serial.println(uint8_t(rtc.LastError()));
   // Ajustando o alarme 2 para disparar a cada 1 minuto
 
 
   DS3231AlarmTwo alarme2(0,0,0,DS3231AlarmTwoControl_OncePerMinute);
+  Serial.println(uint8_t(rtc.LastError()));
   rtc.SetAlarmTwo(alarme2);
+  Serial.println(uint8_t(rtc.LastError()));
   rtc.LatchAlarmsTriggeredFlags();
-]
+  Serial.println(uint8_t(rtc.LastError()));
+
 
 
   // ativando as interrupções
-  attachInterrupt(pinoRTCSquareWave, RotinaInterrupcaoAlarm, FALLING);
+  attachInterrupt(digitalPinToInterrupt(pinoRTCSquareWave), RotinaInterrupcaoAlarm, FALLING);
 
   delay(1000);
-    */
+    
+
+
+
+
   // Iniciando sistema de coleta de temperatura/umidade
 
-  attachInterrupt(PLUVI_PIN, CapturarOscilacao, FALLING);
+  attachInterrupt(digitalPinToInterrupt(PLUVI_PIN), CapturarOscilacao, FALLING);
 
   Serial.println(F("Iniciando sensor DHT22"));
   sensorHT.begin();
@@ -424,9 +493,11 @@ void loop()
   String temp;
   double vel;
   meuOled.modificarLinha(USER_INFO, DateTime2String(rtc.GetDateTime()));
-  meuOled.modificarLinha(BUFFER_INFO, "Buffer Size: " + String(contadorDHT));
+  meuOled.modificarLinha(BUFFER_INFO, "Buffer Size DHT: " + String(contadorDHT) + "   " + String(contadorPluviometro));
   meuOled.atualizarVisualizacao();
   unsigned long atual = millis();
+  RtcDateTime ob;
+  uint8_t diaAtual = ob.Day();
   // put your main code here, to run repeatedly:
   if (AlarmeAtivo() || atual - inicio > 3000)
   {
@@ -454,9 +525,9 @@ void loop()
     Serial.println(bufferDHT[contadorDHT].instante);
     Serial.print("Contador atual DHT: ");
     Serial.println(contadorDHT);
-    Serial.print("Contador atual Pluviometro: ");
-    Serial.println(contadorPluviometro);
-    Serial.println("#############");
+    //  Serial.print("Contador atual Pluviometro: ");
+    // Serial.println(contadorPluviometro);
+    // Serial.println("#############");
     Serial.flush();
 
     // DHT22
@@ -467,23 +538,37 @@ void loop()
     bufferDHT[contadorDHT].umidade = sensorHT.readHumidity();
     bufferDHT[contadorDHT].temperatura = sensorHT.readTemperature();
     contadorDHT++;
-    
 
-    // PLUVIOMETRO
-    Serial.print(F("Pulso(s) pluviometro "));
-    if(bufferPluviometro[contadorPluviometro].pulsos!=0){
-    bufferPluviometro[contadorPluviometro].instante = temp;
-    Serial.print(F("Pulsos: "));
-    //bufferPluviometro[contadorPluviometro].pulsos = contadorPulsosPluviometro;
-    Serial.println(bufferPluviometro[contadorPluviometro].pulsos);
-    contadorPluviometro++;
-    Serial.println("diferente(s) de zero. Dados coletados");
-    }
-    Serial.println("igual a zero. Dados nao coletados");
-    if (TAM_BUFFER == contadorDHT)
+    /*
+        // PLUVIOMETRO
+        Serial.print(F("Pulso(s) pluviometro "));
+        if(bufferPluviometro[contadorPluviometro].pulsos!=0){
+        bufferPluviometro[contadorPluviometro].instante = temp;
+        Serial.print(F("Pulsos: "));
+        //bufferPluviometro[contadorPluviometro].pulsos = contadorPulsosPluviometro;
+        Serial.println(bufferPluviometro[contadorPluviometro].pulsos);
+        contadorPluviometro++;
+        Serial.println("diferente(s) de zero. Dados coletados");
+        }
+        Serial.println("igual a zero. Dados nao coletados");
+        if (TAM_BUFFER==contadorPluviometro)
+          {
+            if (enviarPluviometro(bufferPluviometro, contadorPluviometro))
+            {
+              // GravarDadosPluvi();
+              Serial.println();
+              Serial.println("Dados de pulsos do pluviometro enviados");
+              contadorPluviometro = 0;
+
+            }
+        }
+    */
+
+    if (TAM_BUFFER <= contadorDHT)
     {
       meuOled.modificarLinha(LORA_INFO, "Preparing Packet");
       meuOled.atualizarVisualizacao();
+      detachInterrupt(digitalPinToInterrupt(PLUVI_PIN));
       if (enviarDHT(bufferDHT, contadorDHT))
       {
         Serial.println();
@@ -492,18 +577,17 @@ void loop()
         meuOled.atualizarVisualizacao();
         contadorDHT = 0;
       }
-    }
-    if (TAM_BUFFER==contadorPluviometro)
+
+      if (enviarPluviometro(bufferPluviometro, contadorPluviometro))
       {
-        if (enviarPluviometro(bufferPluviometro, contadorPluviometro))
-        {
-          // GravarDadosPluvi();
-          Serial.println();
-          Serial.println("Dados de pulsos do pluviometro enviados");
-          contadorPluviometro = 0;
-          
-        }
+        // GravarDadosPluvi();
+        Serial.println();
+        Serial.println("Dados de pulsos do pluviometro enviados");
+        contadorPluviometro = 0;
+      }
     }
+    attachInterrupt(digitalPinToInterrupt(PLUVI_PIN), CapturarOscilacao, FALLING);
+
     inicio = atual;
 
     /*
@@ -511,6 +595,48 @@ void loop()
         contadorVento = contadorVento % TAM_BUFFER;
       contadorDHT = contadorDHT % TAM_BUFFER;
     */
+  }
+
+  if (flagOscilacao || ob.Day() != diaAtual)
+  {
+    flagOscilacao = false;
+    RtcDateTime t = rtc.GetDateTime();
+    temp = DateTime2String(t);
+
+    if (ob.Day() != diaAtual)
+    {
+
+      contadorPluviometro++;
+      bufferPluviometro[contadorPluviometro].pulsos = 0;
+      bufferPluviometro[contadorPluviometro].instante = temp;
+      diaAtual = ob.Day();
+      detachInterrupt(digitalPinToInterrupt(PLUVI_PIN));
+      if (enviarPluviometro(bufferPluviometro, contadorPluviometro))
+        contadorPluviometro = 0;
+      attachInterrupt(digitalPinToInterrupt(PLUVI_PIN), CapturarOscilacao, FALLING);
+      return;
+    }
+
+    Serial.print("Contador atual Pluviometro: ");
+    Serial.println(contadorPluviometro);
+    Serial.println("#############");
+    Serial.flush();
+    Serial.print(F("Pulso(s) pluviometro "));
+    bufferPluviometro[contadorPluviometro].instante = temp;
+    contadorPluviometro++;
+
+    if (TAM_BUFFER <= contadorPluviometro)
+    {
+      detachInterrupt(digitalPinToInterrupt(PLUVI_PIN));
+      if (enviarPluviometro(bufferPluviometro, contadorPluviometro))
+      {
+        // GravarDadosPluvi();
+        Serial.println();
+        Serial.println("Dados de pulsos do pluviometro enviados");
+        contadorPluviometro = 0;
+      }
+      attachInterrupt(digitalPinToInterrupt(PLUVI_PIN), CapturarOscilacao, FALLING);
+    }
   }
 
   /*

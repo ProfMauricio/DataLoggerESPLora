@@ -47,66 +47,8 @@
 #define ANEMOMETRO_PIN  38
 
 
-/** 
- * Buffer que guarda as medidas de umidade/temperatura lidas
- **/ 
-DHT_Data bufferDHT[TAM_BUFFER];
-volatile int contadorDHT = 0;
-
-/**
- * Buffer que armazena as medidas de vento 
- **/ 
-Vento_Data bufferVento[TAM_BUFFER];
-volatile int contadorVento = 0;
-
-/**
- * Buffer que guarda a quantidade de pulsos em determinado tempo
- **/ 
-Pluvi_Data bufferPluviometro[TAM_BUFFER];
-int contadorPluviometro = 0;
-int pulsosPluvi = 0;
-/**
- * String que armazena os instantes
- * */
-String datetimeStr;
-
-/**
- * Objeto que captura os dados do sensor DHT
- * */
-DHT sensorHT(DHT_PIN, DHT22);
 
 
-
-/**
- * Contador de interrupção por alarme
- * */
-volatile uint64_t interruptCountAlarm = 0;
-
-/**
- * Flag do alarme RTC apra captura de dados por alarme do DS3231
- **/
-volatile bool interruptFlagAlarm = false;
-
-/**
- * Flag de aviso do usuario que deseja forçar a realização de uma coleta
- **/
-bool usuarioSolicitaLeitura = false;
-
-/**
- * Flag que sinaliza que houve oscilação no pluviometro
- * */
-volatile bool flagOscilacao = false;
-
-
-/**
- * Contador de pulsos do pluviometro utilizado na interrupção para 
- * gravar dados
- * */
-volatile int contadorPulsosPluviometro=0;
-
-
-
-String bufferSerial;
 
 /**
  * Função que verifica se existe algum alarme ativo do RTC 
@@ -116,7 +58,7 @@ bool AlarmeAtivo();
 /**
  * Função de interrupção para captura do dado do pluviometro
  **/
-void CapturarOscilacao(int reset);
+void IRAM_ATTR CapturarOscilacao();
 
 /**
  * Rotina que captura a velocidade do vento com base nos pulsos enviados 

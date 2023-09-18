@@ -2,11 +2,11 @@
 #include "IntegracaoDados.h"
 #include <Arduino.h>
 #include <LoRa.h>
-
+#include "main.h"
 // configuracoes de enderecos para o LoRa
 byte BroadCastAddressLoRa = 0xFF;
 byte RemoteAddressLoRa = 0x05;
-byte MyAddressLoRa = 0x01;
+byte MyAddressLoRa = 0x02;
 byte contadorMsg = 0;
 long instanteUltimoEnvio = 0; // TimeStamp da ultima mensagem enviada
 int intervalo = 3000;         // Intervalo entre verificacoes
@@ -44,13 +44,18 @@ void IniciarLoRa()
 
 bool TransmitirDados(String buffer)
 {
+  // detachInterrupt(digitalPinToInterrupt(PLUVI_PIN));
   unsigned long inicio, duracao = 0;
   int tentativas = 0;
   String ret = "";
 
   while (tentativas < MAX_TENTATIVAS)
   {
-    Serial.println(F("Retransmitindo dados para receiver "));
+    if (tentativas == 0)
+      Serial.println(F("Transmitindo dados para receiver "));
+    else
+      Serial.println(F("Retransmitindo dados para receiver "));
+
     Serial.print(F("Msg : "));
     Serial.println(buffer);
     retorno = "";
@@ -89,6 +94,8 @@ bool TransmitirDados(String buffer)
     }
   }
   return false;
+
+  // attachInterrupt(digitalPinToInterrupt(PLUVI_PIN), CapturarOscilacao, FALLING);
 }
 
 // Funcao que envia uma mensagem LoRa
@@ -196,7 +203,7 @@ void IRAM_ATTR receberMensagemLoRA(int tamanhoPacote)
       if (msg[i] == '@')
         inicio = i;
     }
-    //i--;
+    // i--;
     /*
     if (inicio == true)
       for (; i < msg.length(); i++)
@@ -204,7 +211,7 @@ void IRAM_ATTR receberMensagemLoRA(int tamanhoPacote)
 
     msg = temp;
     */
-    msg=msg.substring(inicio,msg.length());
+    msg = msg.substring(inicio, msg.length());
     Serial.print("Msg limpa -> ");
     Serial.println(msg);
 
@@ -310,23 +317,29 @@ bool enviarPluviometro(Pluvi_Data *bufferPluviometro, int tam)
   int tentativas = 0;
   String msg;
   bool envioOk = false;
+  Serial.print("Tamanho do buffer Pluvi ->");
+  Serial.println(tam);
+  if (tam <= 0)
+    return false;
   Serial.println("Envio de dados do Pluviometro para Mestre");
-  while (!envioOk || tentativas < MAX_TENTATIVAS)
+
+  // int cont = 0;
+  for (i = 0; i < tam; i++)
   {
-    for (i = 0; i < tam; i++)
-    {
-      msg = startMsg;
-      msg = msg + "PLU";
-      msg = msg + separatorMsg;
-      msg = msg + bufferPluviometro[i].instante;
-      msg = msg + separatorMsg;
-      msg = msg + bufferPluviometro[i].pulsos;
-      msg = msg + csvSeparator;
-      msg = msg + endMsg;
-      bufferPluviometro[i].pulsos = 0;
-      tentativas++;
-      envioOk= TransmitirDados(msg);
-    }
+    msg = startMsg;
+    msg = msg + "PLU";
+    msg = msg + separatorMsg;
+    msg = msg + bufferPluviometro[i].instante;
+    msg = msg + separatorMsg;
+    msg = msg + bufferPluviometro[i].pulsos;
+    msg = msg + csvSeparator;
+    msg = msg + endMsg;
+    envioOk = TransmitirDados(msg);
+    if(envioOk){
+     bufferPluviometro[i].pulsos = 0;
+
+     }
   }
+
   return envioOk;
 }

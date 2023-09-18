@@ -4,7 +4,7 @@
 #include "IntegracaoDados.h"
 #include <Arduino.h>
 
-const int TIMEOUT = 5000;
+const int TIMEOUT = 10000;
 const int MAX_TENTATIVAS=5;
 
 #define BAND 433E6//Frequenciado radio -podemos utilizar ainda : 433E6, 868E6, 915E6
@@ -40,24 +40,24 @@ bool avisarInicio();
 /**
  * Rotina que verifica se o mestre enviou alguma mensagem
  **/ 
-String VerificarSerialMestre();
+// String VerificarSerialMestre();
 
 /**
  * Rotina para tratar dados que chegam do mestre
  * */
-TMSG_MESTRE TratarMsgMestre( String msg );
+// TMSG_MESTRE TratarMsgMestre( String msg );
 
 /**
  * Rotina para iniciar a porta serial de comunicaçao com o mestre
  **/ 
-bool iniciarPortaSerialMestre();
+//bool iniciarPortaSerialMestre();
 
 bool enviarDHT(DHT_Data *bufferDHT, int tam);
 bool enviarPluviometro(Pluvi_Data *bufferPluviometro, int tam);
 //bool TransmitirDadosVento(int controleVento, Vento_Data *bufferVento);
 bool TransmitirDados(String buffer);
 void IniciarLoRa();
-void receberMensagemLoRA( int tamanhoPacote );
+void IRAM_ATTR receberMensagemLoRA( int tamanhoPacote );
 void enviarMensagemLoRa(String msg) ;
 
 #endif
