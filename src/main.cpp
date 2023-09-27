@@ -33,9 +33,6 @@ void setup()
   Rtc.SetAlarmTwo(alarm2);
   Rtc.LatchAlarmsTriggeredFlags();
   IniciarLoRa();
-  Serial.println(DateTime2String(Rtc.GetDateTime()));
-  Serial.println(sensorDHT.readTemperature());
-  Serial.println(sensorDHT.readHumidity());
 }
 
 void loop()
